@@ -15,12 +15,7 @@ uv pip install -r requirements.txt
 ```
 
 ## Useage 
-To run the scraper, downloading and saving each available day's Early Voting data to a local csv, run:
+To run the scraper, downloading Early Voter files, appending them together and uploading the results to BQ, run:
 ```bash
-python download_ev_files.py
+python scrape_ev_files.py
 ```
-
-To then combine all the downloaded files [and eventually upload to bq], run:
-```bash
-python combine_results.py
-``````
