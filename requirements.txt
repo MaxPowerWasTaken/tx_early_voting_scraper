@@ -1,0 +1,4 @@
+chromedriver-py==122.0.6261.128  #124.0.6367.91
+selenium==4.20.0
+pandas==2.2.2
+tqdm==4.66.2
