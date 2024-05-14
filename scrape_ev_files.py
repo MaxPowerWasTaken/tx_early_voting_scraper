@@ -1,8 +1,11 @@
-from datetime import datetime
-from glob import glob
 import os
 import pandas as pd
+import pyarrow as pa
 import time
+
+from datetime import datetime
+from glob import glob
+from pandas_gbq import to_gbq
 
 from pathlib import Path
 from selenium import webdriver
@@ -65,12 +68,16 @@ def get_report_dates(driver, origin_url, election):
     return dates
 
 
-
 if __name__ == "__main__":
-    # Constants/Params (election should be configurable)
-    ORIGIN_URL = "https://earlyvoting.texas-election.com/Elections/getElectionDetails.do"
+    # PARAMS (should be configurable)
     ELECTION = '2024 MARCH 5TH DEMOCRATIC PRIMARY'
+    GBQ_DEST_DATASET = "evav_processing_2024"
+    GBQ_DEST_TABLENAME = ELECTION.replace(" ", "_").lower()
+
+    # Constants (these are not configurable, or at least there's no point in changing them)
+    ORIGIN_URL = "https://earlyvoting.texas-election.com/Elections/getElectionDetails.do"
     CSV_DL_DIR = "downloaded_files"
+
 
     # initialize the driver (mainly to ensure CSVs we download stay in this project folder)    
     driver = init_driver(local_download_path=CSV_DL_DIR)
@@ -86,8 +93,9 @@ if __name__ == "__main__":
     # Get report-dates we'll need to iterate through
     report_dates = get_report_dates(driver, ORIGIN_URL, ELECTION)
 
-    num_csvs_downloaded = 0
-    for d in report_dates:
+    num_csvs_downloaded = 0  # tracking total downloaded csvs lets us confirm each is downloaded
+    final_df = pd.DataFrame()
+    for d in tqdm(report_dates):
         print(f"Downloading report for {d}")
         # navigate back to the main Early Voter page for this election 
         driver = submit_election(driver, ORIGIN_URL, ELECTION)
@@ -119,15 +127,19 @@ if __name__ == "__main__":
                 print(f"waiting for {d} to download...")
                 time.sleep(1)
 
-            # rename that downloaded file to include the date, so we know which file is which later
+            # read that latest-downloaded csv into a df; append to results
             csv_files = [f for f in os.listdir(CSV_DL_DIR) if f.endswith('.csv')]
-            print(csv_files)       
             latest_file = max(csv_files, key=lambda x: os.path.getctime(os.path.join(CSV_DL_DIR, x)))
-            d_str = datetime.strptime(d, '%B %d,%Y').strftime('%Y%m%d')
-            new_fname = f"ev_turnout_{d_str}.csv"
-            print(f"renaming {latest_file} to {new_fname}")
-            os.rename(os.path.join(CSV_DL_DIR, latest_file), os.path.join(CSV_DL_DIR, new_fname))
 
-        # don't slam the Sec of State website servers; pause between download loops
-        time.sleep(3)
-        print("\n")
+            # not including all columns here; just the ones that seem like they might get mistaken for ints (but shouldn't be)
+            dtypes = {c:'string' for c in ['ID_VOTER', 'PRECINCT', 'POLL PLACE ID']}
+            df = pd.read_csv(os.path.join(CSV_DL_DIR, latest_file), dtype_backend='pyarrow', dtype=dtypes)            
+            df['filedate'] = datetime.strptime(d, "%B %d,%Y")
+            final_df = pd.concat([final_df, df], axis=0, ignore_index=True)
+
+    # unindent two levels; out of the try/except block and out of the for loop of dates
+    print(f"uploading to GBQ: {GBQ_DEST_DATASET}.{GBQ_DEST_TABLENAME}")
+    to_gbq(final_df, 
+            f"{GBQ_DEST_DATASET}.{GBQ_DEST_TABLENAME}", 
+            if_exists='replace',
+            project_id='demstxsp')
