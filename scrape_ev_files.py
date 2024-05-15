@@ -12,6 +12,7 @@ from selenium import webdriver
 from chromedriver_py import binary_path
 from selenium.common.exceptions import TimeoutException
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
@@ -23,9 +24,13 @@ def init_driver(local_download_path):
     
     # Set up the driver
     svc = webdriver.ChromeService(executable_path=binary_path)
-    driver = webdriver.Chrome(service=svc)
 
-    # Set up the Chrome options so that any CSV downloads are saved to project dir
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # better for docker/portal
+
+    driver = webdriver.Chrome(service=svc, options=chrome_options)
+
+    # ensure that any CSV downloads are saved to project dir, not default downloads folder
     driver.command_executor._commands["send_command"] = ("POST", '/session/$sessionId/chromium/send_command')
     params = {'cmd': 'Page.setDownloadBehavior', 'params': {'behavior': 'allow','downloadPath':local_download_path}}
     command_result = driver.execute("send_command", params)
