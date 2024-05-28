@@ -14,7 +14,7 @@ source .venv/bin/activate  # or .venv\Scripts\activate On Windows.
 uv pip install -r requirements.txt  
 ```
 
-## Useage 
+## Usage 
 To run the scraper, downloading Early Voter files, appending them together and uploading the results to BQ, run:
 ```bash
 python scrape_ev_files.py
