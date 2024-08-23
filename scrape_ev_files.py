@@ -9,31 +9,53 @@ from pandas_gbq import to_gbq
 
 from pathlib import Path
 from selenium import webdriver
-from chromedriver_py import binary_path
 from selenium.common.exceptions import TimeoutException
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+
 from tqdm import tqdm
 
 def init_driver(local_download_path):
     os.makedirs(local_download_path, exist_ok=True)
-    
+
+    # Set Chrome Options    
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--remote-debugging-port=9222")
+
+    prefs = {
+        "download.default_directory": local_download_path,
+        "download.prompt_for_download": False,
+        "download.directory_upgrade": True,
+        "safebrowsing.enabled": True
+    }
+    chrome_options.add_experimental_option("prefs", prefs)
+
     # Set up the driver
-    svc = webdriver.ChromeService(executable_path=binary_path)
+    #svc = webdriver.ChromeService(executable_path=binary_path)
+    # In the selenium/chrome image, ChromeDriver should already be in the PATH
+    service = Service()
 
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # better for docker/portal
+    driver = webdriver.Chrome(service=service, options=chrome_options)
 
-    driver = webdriver.Chrome(service=svc, options=chrome_options)
+    # Set download behavior
+    driver.execute_cdp_cmd("Page.setDownloadBehavior", {
+        "behavior": "allow",
+        "downloadPath": local_download_path
+    })
 
     # ensure that any CSV downloads are saved to project dir, not default downloads folder
-    driver.command_executor._commands["send_command"] = ("POST", '/session/$sessionId/chromium/send_command')
-    params = {'cmd': 'Page.setDownloadBehavior', 'params': {'behavior': 'allow','downloadPath':local_download_path}}
-    command_result = driver.execute("send_command", params)
+    #driver.command_executor._commands["send_command"] = ("POST", '/session/$sessionId/chromium/send_command')
+    #params = {'cmd': 'Page.setDownloadBehavior', 'params': {'behavior': 'allow','downloadPath':local_download_path}}
+    #command_result = driver.execute("send_command", params)
 
     return driver
 
