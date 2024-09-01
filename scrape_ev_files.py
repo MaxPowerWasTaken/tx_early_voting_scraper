@@ -10,7 +10,6 @@ from pandas_gbq import to_gbq
 from pathlib import Path
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
-from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
@@ -25,10 +24,16 @@ def init_driver(local_download_path):
 
     # Set Chrome Options    
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--remote-debugging-port=9222")
+
+    # more chrome options recommended from https://stackoverflow.com/a/78936680/1870832
+    # to avoid timeout error
+    chrome_options.add_argument('--dns-prefetch-disable')
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--enable-cdp-events')
 
     prefs = {
         "download.default_directory": local_download_path,
@@ -39,11 +44,7 @@ def init_driver(local_download_path):
     chrome_options.add_experimental_option("prefs", prefs)
 
     # Set up the driver
-    #svc = webdriver.ChromeService(executable_path=binary_path)
-    # In the selenium/chrome image, ChromeDriver should already be in the PATH
     service = Service()
-
-    chrome_options = Options()
     driver = webdriver.Chrome(service=service, options=chrome_options)
 
     # Set download behavior
@@ -51,11 +52,6 @@ def init_driver(local_download_path):
         "behavior": "allow",
         "downloadPath": local_download_path
     })
-
-    # ensure that any CSV downloads are saved to project dir, not default downloads folder
-    #driver.command_executor._commands["send_command"] = ("POST", '/session/$sessionId/chromium/send_command')
-    #params = {'cmd': 'Page.setDownloadBehavior', 'params': {'behavior': 'allow','downloadPath':local_download_path}}
-    #command_result = driver.execute("send_command", params)
 
     return driver
 

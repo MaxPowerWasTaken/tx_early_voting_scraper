@@ -19,3 +19,9 @@ To run the scraper, downloading Early Voter files, appending them together and u
 ```bash
 python scrape_ev_files.py
 ```
+
+## Run in local docker (for debugging)
+Build with `docker build -t tx_early_voting_scraper .` 
+and run with `docker run tx_early_voting_scraper`
+
+Hop into an interactive shell with (after building): `docker run -it tx_early_voting_scraper /bin/bash`
