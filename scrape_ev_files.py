@@ -92,12 +92,12 @@ def get_report_dates(driver, origin_url, election):
 
 
 if __name__ == "__main__":
-    # PARAMS (should be configurable)
-    ELECTION = '2024 MARCH 5TH DEMOCRATIC PRIMARY'
+    # PARAMS (configurable)
+    ELECTION = '2024 NOVEMBER 5TH GENERAL ELECTION'
+
+    # Constants
     GBQ_DEST_DATASET = "evav_processing_2024"
     GBQ_DEST_TABLENAME = ELECTION.replace(" ", "_").lower()
-
-    # Constants (these are not configurable, or at least there's no point in changing them)
     ORIGIN_URL = "https://earlyvoting.texas-election.com/Elections/getElectionDetails.do"
     CSV_DL_DIR = "downloaded_files"
 
